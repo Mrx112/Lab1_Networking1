@@ -1,6 +1,6 @@
 /* HomeCloud Link — mesin simulasi + UI. Tanpa dependensi. */
 (() => {
-  const { zones, nodes, links, configs, explain, tests } = window.NET;
+  const { zones, nodes, links, configs, explain, tests, info, about } = window.NET;
   const $ = (s, r = document) => r.querySelector(s);
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
   const L2 = new Set(['switch', 'ap', 'cloud']);
@@ -185,9 +185,33 @@
     Object.values(nodeEls).forEach(g => g.classList.remove('selected'));
     nodeEls[id].classList.add('selected');
     const n = byId[id];
-    if (configs[id]) { $('#cfg-dev').value = id; showTab('cfg'); showConfig(id); }
-    else { $('#src').value = id; showTab('sim'); }
+    renderDevCard(n);
+    showTab('dev');
     addLog('info', `${n.name} dipilih${n.ip ? ' · ' + n.ip : ''}`);
+  }
+  function renderDevCard(n) {
+    const i = info[n.id] || { role: n.type, desc: '', real: '' };
+    const zone = zones.find(z => z.id === n.zone)?.label || '';
+    const ifaces = n.ifaces
+      ? Object.entries(n.ifaces).map(([k, v]) => `<span>${k}<small>${v.ip}/${v.mask}${v.aclIn ? ' · ACL ' + v.aclIn + ' in' : ''}</small></span>`).join('')
+      : n.ip ? `<span>${n.type === 'laptop' ? 'Wireless0' : n.type === 'solar' ? 'FastEthernet3' : 'FastEthernet0'}<small>${n.ip}/${n.mask} · gw ${n.gw}${n.dhcp ? ' · DHCP' : ''}${n.vlan ? ' · VLAN ' + n.vlan : ''}</small></span>`
+      : n.mgmt ? `<span>Vlan${n.id === 'swh' ? '110' : '1'}<small>${n.mgmt}/24 (manajemen)</small></span>` : '<span>—<small>tanpa IP (L2)</small></span>';
+    const links_ = adj[n.id].map(e => `<span>${e.my} ↔ ${byId[e.other].name}<small>${e.their}${e.link.kind === 'antenna' ? ' · antena' : e.link.kind === 'trunk' ? ' · trunk' : e.link.kind === 'wifi' ? ' · WiFi' : e.link.kind === 'public' ? ' · publik' : ''}</small></span>`).join('');
+    const routes = n.routes ? `<dt>Route</dt><dd class="iface">${n.routes.map(r => `<span>${r.net}/${r.mask} via ${r.via}<small>AD ${r.ad}${r.ad > 1 ? ' · cadangan' : ''}</small></span>`).join('')}</dd>` : '';
+    const acl = n.acls ? `<dt>ACL</dt><dd class="iface">${Object.entries(n.acls).map(([k, a]) => a.map((e, j) => `<span>${k} ${(j + 1) * 10} ${e.action}<small>${e.src === '0.0.0.0' ? 'any' : e.src + (e.wild === 32 ? '' : '/' + e.wild)} · ${e.note}</small></span>`).join('')).join('')}</dd>` : '';
+    $('#devcard').innerHTML = `
+      <div class="head"><div class="badge"><svg viewBox="-16 -16 32 32"><path d="${GLYPH[n.type]}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><h3>${n.name}</h3><div class="role">${i.role}</div></div></div>
+      <p>${i.desc}</p>
+      <dl><dt>Lokasi</dt><dd>${zone}</dd><dt>Alamat</dt><dd class="iface">${ifaces}</dd>${routes}${acl}<dt>Terhubung ke</dt><dd class="iface">${links_}</dd></dl>
+      ${i.real ? `<div class="real"><b>Di dunia nyata</b>${i.real}</div>` : ''}
+      <div class="actions">${configs[n.id] ? `<button class="btn small" data-act="cfg">Lihat config</button>` : ''}${n.ip || n.type === 'router' ? `<button class="btn small" data-act="ping">Ping dari sini</button>` : ''}${n.ip && n.type !== 'attacker' ? `<button class="btn small" data-act="target">Jadikan tujuan</button>` : ''}</div>`;
+    $('#devcard').querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+      const a = b.dataset.act;
+      if (a === 'cfg') { $('#cfg-dev').value = n.id; showConfig(n.id); showTab('cfg'); }
+      if (a === 'ping') { $('#src').value = n.id; showTab('sim'); }
+      if (a === 'target') { $('#dst').value = n.ip; showTab('sim'); }
+    });
   }
 
   function refreshLinks() {
@@ -239,7 +263,7 @@
   $('#log-clear').onclick = () => (logEl.innerHTML = '');
 
   // ---------------- tabs ----------------
-  const TABS = ['sim', 'cfg', 'test', 'guard'];
+  const TABS = ['dev', 'sim', 'cfg', 'test', 'guard'];
   function showTab(t) {
     TABS.forEach(k => { $(`#tab-${k}`).setAttribute('aria-selected', String(k === t)); $(`#p-${k}`).hidden = k !== t; });
   }
@@ -492,8 +516,11 @@
 
   window.HC = { computePath, ping, state };
 
+  // ---------------- penjelasan ----------------
+  $('#about').innerHTML = about.map((a, i) => `<details${i === 0 ? ' open' : ''}><summary>${a.title}</summary><div class="body">${a.body}</div></details>`).join('');
+
   // ---------------- boot ----------------
-  refreshLinks(); showConfig('rh'); gRender();
+  refreshLinks(); showConfig('rh'); gRender(); renderDevCard(byId.rh);
   addLog('ok', '18 perangkat asli + R-Warehouse, ISP-Public, 3 AI Server, PC Warehouse — semua link UP');
   setTimeout(() => { if (!state.busy) runSim(true); }, 900);
 })();

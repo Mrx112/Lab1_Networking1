@@ -26,6 +26,20 @@
   </div>
 </header>
 
+<section class="hero">
+  <div class="hero-text">
+    <h2>Dua gedung, dua jalur, satu jaringan.</h2>
+    <p>Rumah (home server + WiFi keluarga) dan warehouse (server pusat + cluster AI) dihubungkan <b>antena point-to-point</b> 10–15 km sebagai jalur utama dan <b>jaringan publik lewat ISP</b> sebagai cadangan otomatis. Klik perangkat mana pun untuk penjelasannya, jalankan ping untuk melihat paket berjalan hop demi hop, atau putus antenanya dan saksikan failover.</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="v">27</div><div class="k">perangkat</div></div>
+    <div class="stat"><div class="v">9</div><div class="k">subnet</div></div>
+    <div class="stat"><div class="v">4</div><div class="k">VLAN rumah</div></div>
+    <div class="stat"><div class="v">2</div><div class="k">jalur antar-gedung</div></div>
+    <div class="stat"><div class="v">11</div><div class="k">uji otomatis</div></div>
+  </div>
+</section>
+
 <main class="app">
   <section class="stage">
     <div class="panel topo-wrap">
@@ -47,19 +61,31 @@
       <div class="panel-h"><h2>Kejadian jaringan</h2><button class="btn small" id="log-clear" type="button">Bersihkan</button></div>
       <div class="log" id="log"></div>
     </div>
+    <div class="panel">
+      <div class="panel-h"><h2>Penjelasan lengkap</h2><span class="hint">topologi · cara paket berjalan · failover · keamanan</span></div>
+      <div class="about" id="about"></div>
+    </div>
   </section>
 
   <aside class="side">
     <div class="panel">
       <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tab-dev" aria-selected="false" aria-controls="p-dev" type="button">Perangkat</button>
         <button class="tab" role="tab" id="tab-sim" aria-selected="true" aria-controls="p-sim" type="button">Simulasi</button>
         <button class="tab" role="tab" id="tab-cfg" aria-selected="false" aria-controls="p-cfg" type="button">Konfigurasi</button>
         <button class="tab" role="tab" id="tab-test" aria-selected="false" aria-controls="p-test" type="button">Pengujian</button>
         <button class="tab" role="tab" id="tab-guard" aria-selected="false" aria-controls="p-guard" type="button">Serangan</button>
       </div>
 
+      <!-- Perangkat -->
+      <div class="tabpanel panel-b" id="p-dev" role="tabpanel" hidden>
+        <p class="intro">Klik perangkat di topologi. Kartu ini menjelaskan perannya, alamat &amp; interface, dan padanannya di dunia nyata.</p>
+        <div class="devcard" id="devcard"></div>
+      </div>
+
       <!-- Simulasi -->
       <div class="tabpanel panel-b" id="p-sim" role="tabpanel">
+        <p class="intro">Pilih sumber dan tujuan lalu <b>Ping</b>. Titik amber = paket pergi, hijau = balasan, merah = dibuang. Panel di bawah menjelaskan keputusan tiap hop: gateway, VLAN, route + AD, ACL.</p>
         <div class="row2">
           <div class="field"><label for="src">Dari</label><select id="src"></select></div>
           <div class="field"><label for="dst">Ke</label><select id="dst"></select></div>
@@ -75,6 +101,7 @@
 
       <!-- Konfigurasi -->
       <div class="tabpanel panel-b" id="p-cfg" role="tabpanel" hidden>
+        <p class="intro">Config asli dari Packet Tracer diputar perintah demi perintah — prompt IOS ikut berubah, dan arti tiap blok muncul di bawah. Terminal mini menerima perintah <code>show</code> dan <code>ping</code>.</p>
         <div class="field"><label for="cfg-dev">Perangkat</label><select id="cfg-dev"></select></div>
         <div class="actions">
           <button class="btn primary" id="cfg-run" type="button">Jalankan config langkah demi langkah</button>
@@ -91,6 +118,7 @@
 
       <!-- Pengujian -->
       <div class="tabpanel panel-b" id="p-test" role="tabpanel" hidden>
+        <p class="intro">11 skenario yang sama dengan verifikasi di Packet Tracer: antar-VLAN, WiFi, rumah ↔ warehouse, solar ↔ solar, failover antena, dan penyerang dari Internet (harapan DROP).</p>
         <div class="actions">
           <button class="btn primary" id="test-run" type="button">Jalankan semua uji</button>
           <button class="btn" id="test-reset" type="button">Reset</button>
@@ -101,6 +129,7 @@
 
       <!-- Serangan -->
       <div class="tabpanel panel-b" id="p-guard" role="tabpanel" hidden>
+        <p class="intro">Memutar ulang <code>server_guard.py</code>: request dicatat (siapa, dari mana), ambang dilewati → server memblokir (firewall OS + tarpit + alert). Sumber dari Internet dibuang lebih dulu oleh ACL router.</p>
         <div class="guard">
           <div class="row2">
             <div class="field"><label for="atk-src">Sumber serangan</label><select id="atk-src"></select></div>
