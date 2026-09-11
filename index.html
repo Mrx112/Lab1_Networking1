@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HomeCloud Link</title>
+<meta name="description" content="Simulasi interaktif jaringan Home Server ↔ Warehouse: animasi paket, demo konfigurasi Cisco, pengujian konektivitas, dan simulasi server_guard.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- BEGIN PAGE -->
+<header class="top">
+  <div class="brand">
+    <div class="mark">HC</div>
+    <div>
+      <h1>HomeCloud Link</h1>
+      <p>Home Server ↔ Warehouse AI Cluster · simulasi dari file Packet Tracer yang sudah dikonfigurasi</p>
+    </div>
+  </div>
+  <div class="top-right">
+    <span class="chip" id="chip-antenna"><span class="dot"></span>Antena PtP 10.0.0.0/30</span>
+    <span class="chip" id="chip-isp"><span class="dot"></span>Jalur publik ISP</span>
+    <button class="btn small" id="theme-btn" type="button" aria-label="Ganti tema">Tema</button>
+  </div>
+</header>
+
+<main class="app">
+  <section class="stage">
+    <div class="panel topo-wrap">
+      <div class="panel-h">
+        <h2>Topologi langsung</h2>
+        <span class="speed">Kecepatan <input type="range" id="speed" min="0.4" max="3" step="0.2" value="1"></span>
+      </div>
+      <svg class="topo" id="topo" viewBox="0 0 1240 620" role="img" aria-label="Diagram jaringan Home Server dan Warehouse"></svg>
+      <div class="legend">
+        <span><i class="copper"></i>Kabel</span>
+        <span><i class="trunk"></i>Trunk 802.1Q</span>
+        <span><i class="wifi"></i>WiFi</span>
+        <span><i class="antenna"></i>Antena PtP (utama)</span>
+        <span><i class="public"></i>Publik / ISP (cadangan)</span>
+        <span>● amber = paket · ● hijau = balasan · ● merah = dibuang</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h2>Kejadian jaringan</h2><button class="btn small" id="log-clear" type="button">Bersihkan</button></div>
+      <div class="log" id="log"></div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="panel">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tab-sim" aria-selected="true" aria-controls="p-sim" type="button">Simulasi</button>
+        <button class="tab" role="tab" id="tab-cfg" aria-selected="false" aria-controls="p-cfg" type="button">Konfigurasi</button>
+        <button class="tab" role="tab" id="tab-test" aria-selected="false" aria-controls="p-test" type="button">Pengujian</button>
+        <button class="tab" role="tab" id="tab-guard" aria-selected="false" aria-controls="p-guard" type="button">Serangan</button>
+      </div>
+
+      <!-- Simulasi -->
+      <div class="tabpanel panel-b" id="p-sim" role="tabpanel">
+        <div class="row2">
+          <div class="field"><label for="src">Dari</label><select id="src"></select></div>
+          <div class="field"><label for="dst">Ke</label><select id="dst"></select></div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btn-ping" type="button">Ping</button>
+          <button class="btn" id="btn-trace" type="button">Trace tanpa animasi</button>
+          <label class="switch"><input type="checkbox" id="antenna-down"> Putus antena (uji failover)</label>
+        </div>
+        <div class="result" id="sim-result"></div>
+        <div class="hops" id="hops"></div>
+      </div>
+
+      <!-- Konfigurasi -->
+      <div class="tabpanel panel-b" id="p-cfg" role="tabpanel" hidden>
+        <div class="field"><label for="cfg-dev">Perangkat</label><select id="cfg-dev"></select></div>
+        <div class="actions">
+          <button class="btn primary" id="cfg-run" type="button">Jalankan config langkah demi langkah</button>
+          <button class="btn" id="cfg-show" type="button">Tampilkan utuh</button>
+        </div>
+        <div class="term" id="term" aria-live="polite"></div>
+        <form class="term-in" id="term-form">
+          <input id="term-cmd" placeholder="ketik: show ip route · show ip int brief · ping 192.168.120.11" autocomplete="off" aria-label="Perintah terminal">
+          <button class="btn" type="submit">Enter</button>
+        </form>
+        <p class="hint">Perintah yang didukung: <code>show running-config</code>, <code>show ip route</code>, <code>show ip interface brief</code>, <code>show vlan brief</code>, <code>show access-lists</code>, <code>ping &lt;ip&gt;</code>, <code>clear</code>.</p>
+        <div class="cfg-explain" id="cfg-explain"></div>
+      </div>
+
+      <!-- Pengujian -->
+      <div class="tabpanel panel-b" id="p-test" role="tabpanel" hidden>
+        <div class="actions">
+          <button class="btn primary" id="test-run" type="button">Jalankan semua uji</button>
+          <button class="btn" id="test-reset" type="button">Reset</button>
+        </div>
+        <div class="summary"><span id="test-summary">0 / 0</span><div class="bar"><i id="test-bar"></i></div></div>
+        <div style="overflow-x:auto"><table class="tests" id="tests"><thead><tr><th>#</th><th>Uji</th><th>Harapan</th><th>Hasil</th></tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <!-- Serangan -->
+      <div class="tabpanel panel-b" id="p-guard" role="tabpanel" hidden>
+        <div class="guard">
+          <div class="row2">
+            <div class="field"><label for="atk-src">Sumber serangan</label><select id="atk-src"></select></div>
+            <div class="field"><label for="atk-dst">Target server</label><select id="atk-dst"></select></div>
+          </div>
+          <div class="actions">
+            <button class="btn danger" id="atk-flood" type="button">Flood / DoS</button>
+            <button class="btn danger" id="atk-brute" type="button">Brute force login</button>
+            <button class="btn danger" id="atk-scan" type="button">Port scan</button>
+            <button class="btn" id="atk-stop" type="button">Stop</button>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="v" id="g-req">0</div><div class="k">request / menit</div></div>
+            <div class="stat"><div class="v" id="g-blocked">0</div><div class="k">diblokir</div></div>
+            <div class="stat"><div class="v" id="g-state">aman</div><div class="k">status server</div></div>
+          </div>
+          <div class="meter" title="ambang 60 request/menit"><i id="g-meter"></i><b></b></div>
+          <div class="guard-log" id="guard-log"><span class="l-dim"># logs/access.log + events.jsonl dari server_guard.py akan muncul di sini</span></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer class="foot">
+  <span>File sumber: <code>Rancangan_Bagan_Home_Server_-_Configured.pkt</code></span>
+  <span>Config asli: <code>docs/configs/</code></span>
+  <span>Script server: <code>server/server_guard.py</code></span>
+</footer>
+<div class="toast" id="toast"><b>Alert</b><span></span></div>
+<!-- END PAGE -->
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
